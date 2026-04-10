@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
   TextInput,
   Modal,
   TouchableOpacity,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useMonster } from '../hooks/useMonster';
 import { MonsterSprite } from '../components/MonsterSprite';
 import { AlchemyVial } from '../components/AlchemyVial';
@@ -28,6 +28,7 @@ import {
 
 export function RanchScreen() {
   const { monster, totalWins, loading, setMonster, retireMonster, sessionStart } = useMonster();
+  const navigation = useNavigation<any>();
   const [feedback, setFeedback] = useState('');
   const [showNewMonster, setShowNewMonster] = useState(false);
   const [newName, setNewName] = useState('');
@@ -144,142 +145,140 @@ export function RanchScreen() {
 
   const unlocked = STAGE_TRAINING_UNLOCK[monster.lifecycleStage];
   const alreadyTrained = (id: string) => (monster.trainCooldowns[id] ?? 0) >= sessionStart;
+  const weekLabel = `W${Math.max(1, Math.floor(monster.age / 7) + 1)}`;
+  const monthLabel = new Date().toLocaleString('default', { month: 'short' }).toUpperCase();
+  const goldTotal = 900 + totalWins * 120;
+  const loyaltyLabel = Math.max(1, Math.floor(monster.mood / 20)).toString();
+  const styleLabel = monster.mood >= 60 ? 'EVEN' : monster.mood >= 35 ? 'STEADY' : 'WEARY';
+  const activeTraining = TRAINING_TYPES.find((t) => unlocked.includes(t.id));
+  const trainingAction = () => {
+    if (!activeTraining) {
+      msg('Training not unlocked yet.');
+      return;
+    }
+    handleTrain(activeTraining.id);
+  };
 
   return (
-    <>
-      <View style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.content}>
-        {/* Header */}
-        <MedievalContainer variant="iron" borderType="ornate">
-          <MedievalText variant="h1" color={medievalColors.parchment}>
-            {monster.name}
+    <View style={styles.screen}>
+      <View style={styles.headerRow}>
+        <MedievalContainer variant="iron" borderType="ornate" style={styles.miniCard}>
+          <MedievalText variant="tiny" color={medievalColors.burnishedGold} style={styles.summaryLabel}>
+            DAY
           </MedievalText>
-          <MedievalText 
-            variant="caption" 
-            color={medievalColors.burnishedGold}
-            style={styles.badge}
-          >
-            {monster.species.toUpperCase()} · {monster.lifecycleStage.toUpperCase()}
-          </MedievalText>
-          <MedievalText 
-            variant="tiny" 
-            color={medievalColors.tarnishedSilver}
-            style={styles.ageText}
-          >
-            Day {monster.age.toFixed(1)}
+          <MedievalText variant="h3" color={medievalColors.parchment}>
+            {monster.age.toFixed(1)}
           </MedievalText>
         </MedievalContainer>
-
-        {/* Viewport */}
-        <MedievalContainer variant="oak" borderType="simple" style={styles.viewport}>
-          <MonsterSprite color={monster.spriteColor} stage={monster.lifecycleStage} name={monster.name} />
-          {isInjured && (
-            <MedievalText variant="tiny" color={medievalColors.bloodRed} style={styles.injuredBadge}>
-              ⚠ INJURED
-            </MedievalText>
-          )}
-          {feedback ? (
-            <MedievalText variant="caption" color={medievalColors.burnishedGold} style={styles.feedback}>
-              {feedback}
-            </MedievalText>
-          ) : null}
+        <MedievalContainer variant="iron" borderType="ornate" style={styles.miniCard}>
+          <MedievalText variant="tiny" color={medievalColors.burnishedGold} style={styles.summaryLabel}>
+            STYLE
+          </MedievalText>
+          <MedievalText variant="h3" color={medievalColors.parchment}>
+            {styleLabel}
+          </MedievalText>
         </MedievalContainer>
+        <MedievalContainer variant="iron" borderType="ornate" style={styles.miniCard}>
+          <MedievalText variant="tiny" color={medievalColors.burnishedGold} style={styles.summaryLabel}>
+            GOLD
+          </MedievalText>
+          <MedievalText variant="h3" color={medievalColors.parchment}>
+            {goldTotal} G
+          </MedievalText>
+        </MedievalContainer>
+      </View>
 
-        {/* Care Vitals */}
-        {!isEgg && (
-          <MedievalContainer variant="oak" borderType="simple" style={styles.vitalSection}>
+      <View style={styles.mainArea}>
+        <View style={styles.sidePanel}>
+          <MedievalContainer variant="oak" borderType="simple" style={styles.sidePanelCard}>
             <MedievalText variant="h3" color={medievalColors.parchment} style={styles.sectionTitle}>
-              ◆ VITALS
+              ACTIONS
             </MedievalText>
-            <AlchemyVial label="Hunger" value={monster.hunger} max={100} color={medievalColors.warning} height={100} />
-            <AlchemyVial label="Mood" value={monster.mood} max={100} color={medievalColors.vialBlue} height={100} />
-            <AlchemyVial label="Fatigue" value={monster.fatigue} max={100} color="#7B1FA2" height={100} />
-          </MedievalContainer>
-        )}
-
-        {isEgg && (
-          <MedievalText 
-            variant="body" 
-            color={medievalColors.tarnishedSilver} 
-            style={styles.eggNote}
-          >
-            ✦ Egg hatches soon... keep watch.
-          </MedievalText>
-        )}
-
-        {/* Actions */}
-        {!isDead && !isEgg && (
-          <>
-            <MedievalContainer variant="oak" borderType="simple">
-              <MedievalText variant="h3" color={medievalColors.parchment} style={styles.sectionTitle}>
-                ◆ CARE
-              </MedievalText>
-              <View style={styles.actionRow}>
-                <MedievalButton 
-                  label="FEED" 
-                  onPress={handleFeed} 
-                  variant="primary"
-                  disabled={monster.hunger >= 95} 
-                />
-                <MedievalButton 
-                  label="REST" 
-                  onPress={handleRest} 
-                  variant="secondary"
-                  disabled={monster.fatigue <= 5} 
-                />
-                <MedievalButton 
-                  label="PLAY" 
-                  onPress={handlePlay} 
-                  variant="primary"
-                  disabled={monster.mood >= 95} 
-                />
-              </View>
-            </MedievalContainer>
-
-            {unlocked.length > 0 && (
-              <MedievalContainer variant="oak" borderType="simple">
-                <MedievalText variant="h3" color={medievalColors.parchment} style={styles.sectionTitle}>
-                  ◆ TRAINING
-                </MedievalText>
-                <View style={styles.trainGrid}>
-                  {TRAINING_TYPES.filter((t) => unlocked.includes(t.id)).map((t) => {
-                    const done = alreadyTrained(t.id);
-                    return (
-                      <MedievalButton
-                        key={t.id}
-                        label={done ? `${t.id} ✓` : t.id.toUpperCase()}
-                        onPress={() => handleTrain(t.id)}
-                        variant="primary"
-                        disabled={done || isInjured || monster.fatigue >= 90}
-                        style={styles.trainBtn}
-                      />
-                    );
-                  })}
-                </View>
-              </MedievalContainer>
-            )}
-          </>
-        )}
-
-        {isDead && (
-          <MedievalContainer variant="iron" borderType="ornate">
-            <MedievalText 
-              variant="body" 
-              color={medievalColors.bloodRed} 
-              style={styles.deathText}
-            >
-              {monster.name} has passed after {monster.age.toFixed(1)} days.
-            </MedievalText>
-            <MedievalButton 
-              label="COMMIT TO LEGACY" 
-              onPress={handleRetire} 
-              variant="danger"
-              style={styles.deathBtn}
+            <MedievalButton
+              label="FEED"
+              onPress={handleFeed}
+              variant="primary"
+              disabled={monster.hunger >= 95}
+              style={styles.sideBtn}
+            />
+            <MedievalButton
+              label="REST"
+              onPress={handleRest}
+              variant="secondary"
+              disabled={monster.fatigue <= 5}
+              style={styles.sideBtn}
+            />
+            <MedievalButton
+              label="PLAY"
+              onPress={handlePlay}
+              variant="primary"
+              disabled={monster.mood >= 95}
+              style={styles.sideBtn}
             />
           </MedievalContainer>
-        )}
-      </ScrollView>
+        </View>
+
+        <View style={styles.centerPanel}>
+          <MedievalContainer variant="oak" borderType="ornate" style={styles.viewport}>
+            <MonsterSprite color={monster.spriteColor} stage={monster.lifecycleStage} name={monster.name} />
+            {isInjured && (
+              <MedievalText variant="tiny" color={medievalColors.bloodRed} style={styles.injuredBadge}>
+                ⚠ INJURED
+              </MedievalText>
+            )}
+            {feedback ? (
+              <MedievalText variant="caption" color={medievalColors.burnishedGold} style={styles.feedback}>
+                {feedback}
+              </MedievalText>
+            ) : null}
+          </MedievalContainer>
+
+          <View style={styles.vitalRow}>
+            <AlchemyVial label="Hunger" value={monster.hunger} max={100} color={medievalColors.warning} height={68} />
+            <AlchemyVial label="Mood" value={monster.mood} max={100} color={medievalColors.vialBlue} height={68} />
+            <AlchemyVial label="Fatigue" value={monster.fatigue} max={100} color="#7B1FA2" height={68} />
+          </View>
+        </View>
+
+        <View style={styles.sidePanel}>
+          <MedievalContainer variant="oak" borderType="simple" style={styles.sidePanelCard}>
+            <MedievalText variant="h3" color={medievalColors.parchment} style={styles.sectionTitle}>
+              TRAINING
+            </MedievalText>
+            <MedievalButton
+              label={activeTraining ? activeTraining.id.toUpperCase() : 'LOCKED'}
+              onPress={trainingAction}
+              variant="primary"
+              disabled={!activeTraining || isInjured || monster.fatigue >= 90}
+              style={styles.sideBtn}
+            />
+            <MedievalButton
+              label="BATTLE"
+              onPress={() => navigation.navigate('Battle')}
+              variant="secondary"
+              style={styles.sideBtn}
+            />
+            <MedievalButton
+              label="STABLE"
+              onPress={() => navigation.navigate('Stable')}
+              variant="secondary"
+              style={styles.sideBtn}
+            />
+          </MedievalContainer>
+        </View>
       </View>
+
+      <MedievalContainer variant="iron" borderType="ornate" style={styles.footerBar}>
+        <View style={styles.footerItem}>
+          <MedievalText variant="tiny" color={medievalColors.tarnishedSilver}>LOYA</MedievalText>
+          <MedievalText variant="h3" color={medievalColors.parchment}>{loyaltyLabel}</MedievalText>
+        </View>
+        <View style={styles.footerItem}>
+          <MedievalText variant="tiny" color={medievalColors.tarnishedSilver}>SPECIES</MedievalText>
+          <MedievalText variant="h3" color={medievalColors.parchment}>{monster.species.toUpperCase()}</MedievalText>
+        </View>
+      </MedievalContainer>
+
       <NewMonsterModal
         visible={showNewMonster}
         onClose={() => setShowNewMonster(false)}
@@ -293,7 +292,7 @@ export function RanchScreen() {
         useInheritance={useInheritance}
         setUseInheritance={setUseInheritance}
       />
-    </>
+    </View>
   );
 }
 
@@ -388,29 +387,26 @@ const styles = StyleSheet.create({
     flex: 1, 
     backgroundColor: medievalColors.iron 
   },
-  content: { 
-    padding: medievalSpacing.md, 
-    paddingBottom: medievalSpacing.xl,
-    gap: medievalSpacing.md,
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  center: { 
-    alignItems: 'center', 
-    justifyContent: 'center' 
-  },
-  summonBtn: { 
+  summonBtn: {
     marginTop: medievalSpacing.lg,
     alignSelf: 'center',
   },
-  badge: { 
-    marginTop: medievalSpacing.xs 
+  badge: {
+    marginTop: medievalSpacing.xs,
   },
-  ageText: { 
-    marginTop: medievalSpacing.xs 
+  ageText: {
+    marginTop: medievalSpacing.xs,
   },
   viewport: {
-    minHeight: 200,
+    flex: 1,
+    minHeight: 320,
     alignItems: 'center',
     justifyContent: 'center',
+    padding: medievalSpacing.xl,
   },
   injuredBadge: {
     marginTop: medievalSpacing.md,
@@ -419,8 +415,11 @@ const styles = StyleSheet.create({
     marginTop: medievalSpacing.md,
     textAlign: 'center',
   },
-  vitalSection: {
-    marginVertical: medievalSpacing.md,
+  vitalRow: {
+    flexDirection: 'row',
+    gap: medievalSpacing.sm,
+    justifyContent: 'space-between',
+    marginTop: medievalSpacing.md,
   },
   eggNote: {
     textAlign: 'center',
@@ -429,33 +428,67 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: medievalSpacing.md,
   },
-  actionRow: { 
-    flexDirection: 'row', 
-    gap: medievalSpacing.md, 
-    justifyContent: 'center',
-    marginBottom: medievalSpacing.md,
-  },
-  trainGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    gap: medievalSpacing.md, 
-    marginBottom: medievalSpacing.md 
-  },
-  trainBtn: { 
-    flex: 1, 
-    minWidth: 100 
-  },
   emptySubtitle: {
     marginTop: medievalSpacing.sm,
     marginBottom: medievalSpacing.lg,
   },
-  deathText: { 
-    textAlign: 'center', 
+  deathText: {
+    textAlign: 'center',
     lineHeight: 24,
     marginBottom: medievalSpacing.md,
   },
   deathBtn: {
     alignSelf: 'center',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    gap: medievalSpacing.sm,
+    marginBottom: medievalSpacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: medievalSpacing.md,
+  },
+  miniCard: {
+    flex: 1,
+    paddingVertical: medievalSpacing.sm,
+    paddingHorizontal: medievalSpacing.md,
+  },
+  summaryLabel: {
+    letterSpacing: 2,
+    marginBottom: medievalSpacing.xs,
+  },
+  mainArea: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: medievalSpacing.md,
+    paddingHorizontal: medievalSpacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sidePanel: {
+    width: 220,
+  },
+  sidePanelCard: {
+    padding: medievalSpacing.md,
+  },
+  sideBtn: {
+    width: '100%',
+    marginBottom: medievalSpacing.sm,
+  },
+  centerPanel: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: medievalSpacing.md,
+    paddingVertical: medievalSpacing.sm,
+    marginTop: medievalSpacing.md,
+  },
+  footerItem: {
+    flex: 1,
+    alignItems: 'center',
   },
 });
 
