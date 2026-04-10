@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   View,
   StyleSheet,
   TextInput,
@@ -92,6 +94,40 @@ export function RanchScreen() {
   };
 
   const unlockedSpecies = getUnlockedSpecies(totalWins);
+  const monsterMove = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(monsterMove, {
+          toValue: { x: 18, y: -16 },
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(monsterMove, {
+          toValue: { x: -14, y: 20 },
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(monsterMove, {
+          toValue: { x: 8, y: -8 },
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(monsterMove, {
+          toValue: { x: 0, y: 0 },
+          duration: 3000,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [monsterMove]);
 
   if (loading) {
     return (
@@ -159,6 +195,10 @@ export function RanchScreen() {
     handleTrain(activeTraining.id);
   };
 
+  const monsterMoveStyle = {
+    transform: monsterMove.getTranslateTransform(),
+  };
+
   return (
     <View style={styles.screen}>
       <View style={styles.headerRow}>
@@ -219,8 +259,10 @@ export function RanchScreen() {
         </View>
 
         <View style={styles.centerPanel}>
-          <MedievalContainer variant="oak" borderType="ornate" style={styles.viewport}>
-            <MonsterSprite color={monster.spriteColor} stage={monster.lifecycleStage} name={monster.name} />
+          <View style={styles.stageArea}>
+            <Animated.View style={[styles.monsterMover, monsterMoveStyle]}>
+              <MonsterSprite color={monster.spriteColor} stage={monster.lifecycleStage} name={monster.name} />
+            </Animated.View>
             {isInjured && (
               <MedievalText variant="tiny" color={medievalColors.bloodRed} style={styles.injuredBadge}>
                 ⚠ INJURED
@@ -231,7 +273,7 @@ export function RanchScreen() {
                 {feedback}
               </MedievalText>
             ) : null}
-          </MedievalContainer>
+          </View>
 
           <View style={styles.vitalRow}>
             <AlchemyVial label="Hunger" value={monster.hunger} max={100} color={medievalColors.warning} height={68} />
@@ -478,6 +520,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  stageArea: {
+    width: '100%',
+    minHeight: 320,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    overflow: 'visible',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monsterMover: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [
+      { translateX: -36 },
+      { translateY: -36 },
+    ],
   },
   footerBar: {
     flexDirection: 'row',

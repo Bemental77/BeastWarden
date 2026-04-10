@@ -74,8 +74,8 @@ export function AppNavigator() {
           tabBarInactiveTintColor: medievalColors.tarnishedSilver,
           tabBarLabelStyle: {
             fontFamily: medievalTypography.monoFamily,
-            fontSize: 9,
-            letterSpacing: 1,
+            fontSize: 12,
+            letterSpacing: 0.5,
             marginTop: 4,
             textTransform: 'uppercase',
           },

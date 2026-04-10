@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
     ...medievalShadows.medium,
   },
   pressable: {
-    paddingVertical: medievalSpacing.md,
-    paddingHorizontal: medievalSpacing.lg,
+    paddingVertical: medievalSpacing.sm,
+    paddingHorizontal: medievalSpacing.sm,
     borderWidth: 2,
     borderRadius: 4,
     alignItems: 'center',
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: medievalColors.parchment,
     letterSpacing: 1,

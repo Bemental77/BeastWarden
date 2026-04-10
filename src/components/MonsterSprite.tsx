@@ -2,12 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LifecycleStage } from '../types';
 
-interface Props {
-  color: string;
-  stage: LifecycleStage;
-  name: string;
-}
-
 const STAGE_SIZE: Record<LifecycleStage, number> = {
   egg:   64,
   baby:  72,
@@ -17,82 +11,135 @@ const STAGE_SIZE: Record<LifecycleStage, number> = {
   dead:  80,
 };
 
-const STAGE_SHAPE: Record<LifecycleStage, number> = {
-  egg:   32,  // very rounded = oval-ish
-  baby:  16,
-  youth: 12,
-  adult: 8,
-  elder: 8,
-  dead:  4,
-};
-
-const STAGE_LABEL: Record<LifecycleStage, string> = {
-  egg:   '◎',
-  baby:  '▲',
-  youth: '◆',
-  adult: '■',
-  elder: '★',
-  dead:  '✕',
-};
+interface Props {
+  color: string;
+  stage: LifecycleStage;
+  name: string;
+}
 
 export function MonsterSprite({ color, stage, name }: Props) {
   const size = STAGE_SIZE[stage];
-  const radius = STAGE_SHAPE[stage];
+  const scale = size / 100;
   const isDead = stage === 'dead';
-  const effectiveColor = isDead ? '#37474F' : color;
+  const bodyColor = isDead ? '#5D5D5D' : color;
+  const accentColor = isDead ? '#8E8E8E' : '#F4D35E';
+  const wingColor = isDead ? '#4D4D4D' : '#8B2E0B';
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { width: 180 * scale, height: 140 * scale }]}> 
       <View
         style={[
-          styles.sprite,
-          {
-            width: size,
-            height: size,
-            borderRadius: radius,
-            backgroundColor: effectiveColor,
-            borderColor: isDead ? '#263238' : darken(color),
-          },
+          styles.monsterBase,
+          { backgroundColor: bodyColor, transform: [{ scale }] },
         ]}
-      >
-        <Text style={styles.stageGlyph}>{STAGE_LABEL[stage]}</Text>
+      > 
+        <View style={[styles.tail, { backgroundColor: bodyColor }]} />
+        <View style={[styles.body, { backgroundColor: bodyColor }]}> 
+          <View style={[styles.belly, { backgroundColor: accentColor }]} />
+        </View>
+        <View style={[styles.head, { backgroundColor: bodyColor }]}> 
+          <View style={[styles.eye, { left: 12 }]} />
+          <View style={[styles.eye, { right: 12 }]} />
+          <View style={[styles.horn, { left: 6, backgroundColor: accentColor }]} />
+          <View style={[styles.horn, { right: 6, backgroundColor: accentColor }]} />
+        </View>
+        <View style={[styles.wing, { backgroundColor: wingColor }]} />
+        <View style={[styles.leg, { left: 16, backgroundColor: bodyColor }]} />
+        <View style={[styles.leg, { right: 16, backgroundColor: bodyColor }]} />
       </View>
       {isDead && <Text style={styles.deadLabel}>DECEASED</Text>}
     </View>
   );
 }
 
-/** Approximate darkening by reducing hex brightness ~30% */
-function darken(hex: string): string {
-  try {
-    const n = parseInt(hex.slice(1), 16);
-    const r = Math.max(0, ((n >> 16) & 0xff) - 60);
-    const g = Math.max(0, ((n >> 8) & 0xff) - 60);
-    const b = Math.max(0, (n & 0xff) - 60);
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-  } catch {
-    return '#000';
-  }
-}
-
 const styles = StyleSheet.create({
   wrapper: {
     alignItems: 'center',
-  },
-  sprite: {
-    alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    width: 180,
+    height: 140,
   },
-  stageGlyph: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 24,
+  monsterBase: {
+    position: 'relative',
+    width: 160,
+    height: 110,
+    borderRadius: 40,
+  },
+  tail: {
+    position: 'absolute',
+    left: -28,
+    top: 50,
+    width: 48,
+    height: 18,
+    borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
+    transform: [{ rotate: '-18deg' }],
+  },
+  body: {
+    position: 'absolute',
+    left: 24,
+    top: 36,
+    width: 72,
+    height: 44,
+    borderRadius: 24,
+  },
+  belly: {
+    position: 'absolute',
+    left: 8,
+    top: 10,
+    width: 56,
+    height: 22,
+    borderRadius: 14,
+    opacity: 0.85,
+  },
+  head: {
+    position: 'absolute',
+    right: -12,
+    top: 28,
+    width: 42,
+    height: 34,
+    borderRadius: 16,
+  },
+  eye: {
+    position: 'absolute',
+    top: 12,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFFFFF',
+  },
+  horn: {
+    position: 'absolute',
+    top: -8,
+    width: 8,
+    height: 16,
+    borderRadius: 4,
+  },
+  wing: {
+    position: 'absolute',
+    left: 22,
+    top: 8,
+    width: 54,
+    height: 48,
+    borderTopLeftRadius: 34,
+    borderTopRightRadius: 14,
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 30,
+    transform: [{ rotate: '-18deg' }],
+    opacity: 0.95,
+  },
+  leg: {
+    position: 'absolute',
+    bottom: -6,
+    width: 10,
+    height: 20,
+    borderRadius: 6,
   },
   deadLabel: {
-    color: '#546E7A',
+    color: '#E0E0E0',
     fontFamily: 'monospace',
     fontSize: 11,
     letterSpacing: 2,
-    marginTop: 6,
+    marginTop: 8,
   },
 });
